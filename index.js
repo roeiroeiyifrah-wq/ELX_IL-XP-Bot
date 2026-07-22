@@ -184,3 +184,286 @@ client.on("messageCreate", async message=>{
 
 
 });
+// בדיקת מקום ראשון ונתינת XP_KING
+
+async function updateXPKing(guild){
+
+
+  const users = Object.entries(database)
+  
+  .filter(([id,data]) => data.xp > 0)
+
+  .sort((a,b)=> b[1].xp - a[1].xp);
+
+
+
+  if(!users[0]) return;
+
+
+
+  const kingId = users[0][0];
+
+
+
+  const role =
+    guild.roles.cache.get(
+      config.ROLES.XP_KING
+    );
+
+
+
+  if(!role) return;
+
+
+
+  for(const [id] of users){
+
+
+    const member =
+      guild.members.cache.get(id);
+
+
+
+    if(member){
+
+      if(id === kingId){
+
+        if(!member.roles.cache.has(role.id)){
+
+          await member.roles.add(role)
+          .catch(()=>{});
+
+        }
+
+
+      } else {
+
+
+        if(member.roles.cache.has(role.id)){
+
+          await member.roles.remove(role)
+          .catch(()=>{});
+
+        }
+
+
+      }
+
+    }
+
+  }
+
+
+}
+
+
+
+
+
+
+
+// !leaderboard
+
+client.on("messageCreate", async message=>{
+
+
+  if(message.author.bot) return;
+
+  if(!message.guild) return;
+
+
+
+  if(message.content === "!leaderboard"){
+
+
+
+    if(
+      !message.member.roles.cache.has(
+        config.ROLES.STAFF
+      )
+    ){
+
+      return;
+
+    }
+
+
+
+    await message.delete()
+    .catch(()=>{});
+
+
+
+    message.channel.send({
+
+      embeds:[
+
+        await createLeaderboard(
+          client,
+          message.guild.id
+        )
+
+      ]
+
+    });
+
+
+  }
+
+
+});
+
+
+
+
+
+
+// !xp
+
+client.on("messageCreate", async message=>{
+
+
+  if(message.author.bot) return;
+
+
+
+  if(!message.content.startsWith("!xp"))
+    return;
+
+
+
+  setTimeout(()=>{
+
+    message.delete()
+    .catch(()=>{});
+
+  },5000);
+
+
+
+
+
+  if(message.author.id !== "1243097719262941224"){
+
+
+
+    const msg =
+      await message.channel.send(
+        "❌ אין לך גישה"
+      );
+
+
+    setTimeout(()=>{
+
+      msg.delete()
+      .catch(()=>{});
+
+    },2000);
+
+
+    return;
+
+  }
+
+
+
+
+
+  const user =
+    message.mentions.users.first();
+
+
+
+  const amount =
+    Number(
+      message.content.split(" ")[2]
+    );
+
+
+
+  if(!user || !amount)
+    return;
+
+
+
+
+
+  if(!database[user.id]){
+
+
+    database[user.id]={
+
+      xp:0,
+      level:1
+
+    };
+
+
+  }
+
+
+
+
+
+  database[user.id].xp += amount;
+
+
+
+  database[user.id].level =
+    getLevel(
+      database[user.id].xp
+    );
+
+
+
+  saveDatabase();
+
+
+
+
+
+  await updateXPKing(
+    message.guild
+  );
+
+
+
+
+
+  const owner =
+    await client.users.fetch(
+      "1243097719262941224"
+    );
+
+
+
+  owner.send({
+
+    embeds:[
+
+      new EmbedBuilder()
+
+      .setTitle("📌 XP Log")
+
+      .setDescription(
+
+        `👤 מי נתן:\n${message.author.username}\n\n`+
+
+        `🎯 למי:\n${user.username}\n\n`+
+
+        `⭐ כמות:\n${amount} XP\n\n`+
+
+        `📊 XP עכשיו:\n${database[user.id].xp}`
+
+      )
+
+      .setTimestamp()
+
+    ]
+
+  }).catch(()=>{});
+
+
+
+});
+client.login(process.env.TOKEN);
