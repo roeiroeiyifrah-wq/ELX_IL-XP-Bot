@@ -7,44 +7,61 @@ const {
 } = require("discord.js");
 
 const fs = require("fs");
+const config = require("./config");
 
 
 const client = new Client({
+
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers
   ]
+
 });
-
-
-const TOKEN = process.env.TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
 
 
 let database = {};
 
+
 if (fs.existsSync("database.json")) {
+
   database = JSON.parse(
     fs.readFileSync("database.json")
   );
+
 }
 
 
 function saveDatabase() {
+
   fs.writeFileSync(
     "database.json",
     JSON.stringify(database, null, 2)
   );
+
 }
 
 
-const cooldown = {};
+const cooldowns = {};
+
+
+const levelRoles = {
+
+  10: config.ROLES.LEVEL_10,
+  20: config.ROLES.LEVEL_20,
+  30: config.ROLES.LEVEL_30,
+  40: config.ROLES.LEVEL_40,
+  50: config.ROLES.LEVEL_50
+
+};
 
 
 function getLevel(xp) {
+
   return Math.floor(Math.sqrt(xp / 100)) + 1;
+
 }
 
 
@@ -55,14 +72,9 @@ client.once("ready", () => {
   );
 
 });
-
-
 client.on("messageCreate", async message => {
 
-
   if (message.author.bot) return;
-
-
   if (!message.guild) return;
 
 
@@ -72,38 +84,44 @@ client.on("messageCreate", async message => {
   if (!database[userId]) {
 
     database[userId] = {
+
       xp: 0,
       level: 1,
       streak: 0,
-      bestStreak: 0
+      bestStreak: 0,
+      lastLevelDM: 0
+
     };
 
   }
-
 
 
   const now = Date.now();
 
 
   if (
-    cooldown[userId] &&
-    now - cooldown[userId] < 20000
+    cooldowns[userId] &&
+    now - cooldowns[userId] < config.XP.MESSAGE_COOLDOWN
   ) {
     return;
   }
 
 
-  cooldown[userId] = now;
-
+  cooldowns[userId] = now;
 
 
   const oldLevel = database[userId].level;
 
 
-  const xpAdd = Math.floor(Math.random() * 10) + 5;
+  const xpGain =
+    Math.floor(
+      Math.random() *
+      (config.XP.MAX - config.XP.MIN + 1)
+    )
+    + config.XP.MIN;
 
 
-  database[userId].xp += xpAdd;
+  database[userId].xp += xpGain;
 
 
   const newLevel = getLevel(
@@ -121,12 +139,37 @@ client.on("messageCreate", async message => {
   if (newLevel > oldLevel) {
 
 
+    const role = levelRoles[newLevel];
+
+
+    if (role) {
+
+      await message.member.roles.add(role)
+        .catch(() => {});
+
+
+      for (const level in levelRoles) {
+
+        if (Number(level) < newLevel) {
+
+          await message.member.roles.remove(
+            levelRoles[level]
+          )
+          .catch(() => {});
+
+        }
+
+      }
+
+    }
+
+
     const embed = new EmbedBuilder()
 
-      .setTitle("🎉 Level Up!")
+      .setTitle("🎉 עלית רמה!")
 
       .setDescription(
-        `🔥 ${message.author} עלה לרמה **${newLevel}**!\n\n⭐ XP: ${database[userId].xp}`
+        `🔥 ${message.author} הגיע לרמה **${newLevel}**!\n\n⭐ XP: **${database[userId].xp}**`
       )
 
       .setTimestamp();
@@ -138,10 +181,40 @@ client.on("messageCreate", async message => {
     });
 
 
+    if (
+      now - database[userId].lastLevelDM >
+      config.LEVEL_DM_COOLDOWN
+    ) {
+
+
+      message.author.send({
+
+        embeds: [
+
+          new EmbedBuilder()
+
+          .setTitle("🏆 Level Up!")
+
+          .setDescription(
+            `עלית לרמה **${newLevel}** בשרת ELX_IL 🔥`
+          )
+
+          .setTimestamp()
+
+        ]
+
+      })
+      .catch(() => {});
+
+
+      database[userId].lastLevelDM = now;
+      saveDatabase();
+
+    }
+
+
   }
 
 
 });
-
-
-client.login(TOKEN);
+client.login(process.env.TOKEN);
