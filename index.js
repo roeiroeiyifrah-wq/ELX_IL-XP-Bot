@@ -56,6 +56,72 @@ function saveDatabase(){
 
 
 
+let leaderboardTimer;
+
+
+
+async function updateLeaderboard(guild){
+
+  clearTimeout(leaderboardTimer);
+
+
+  leaderboardTimer = setTimeout(async ()=>{
+
+
+    try{
+
+
+      const channel =
+        guild.channels.cache.get(
+          config.CHANNELS.LEADERBOARD
+        );
+
+
+      if(!channel) return;
+
+
+
+      const message =
+        await channel.messages.fetch(
+          "1529522344740126741"
+        );
+
+
+
+      await message.edit({
+
+        embeds:[
+
+          await createLeaderboard(
+            client,
+            guild.id
+          )
+
+        ]
+
+      });
+
+
+
+    }catch(error){
+
+      console.log(
+        "Leaderboard update error:",
+        error.message
+      );
+
+    }
+
+
+  },5000);
+
+
+}
+
+
+
+
+
 const cooldowns = {};
 
 
@@ -72,6 +138,8 @@ const levelRoles = {
 
 
 
+
+
 function getLevel(xp){
 
   return Math.floor(
@@ -79,6 +147,8 @@ function getLevel(xp){
   ) + 1;
 
 }
+
+
 
 
 
@@ -105,7 +175,8 @@ client.on("messageCreate", async message=>{
 
 
 
-  const id = message.author.id;
+  const id =
+    message.author.id;
 
 
 
@@ -114,6 +185,7 @@ client.on("messageCreate", async message=>{
     database[id]={
 
       xp:0,
+
       level:1
 
     };
@@ -122,9 +194,18 @@ client.on("messageCreate", async message=>{
 
 
 
+  const now =
+    Date.now();
+
+
+
   if(
+
     cooldowns[id] &&
-    Date.now()-cooldowns[id] < config.XP.MESSAGE_COOLDOWN
+
+    now - cooldowns[id] <
+    config.XP.MESSAGE_COOLDOWN
+
   ){
 
     return;
@@ -133,7 +214,7 @@ client.on("messageCreate", async message=>{
 
 
 
-  cooldowns[id]=Date.now();
+  cooldowns[id] = now;
 
 
 
@@ -148,9 +229,6 @@ client.on("messageCreate", async message=>{
     )
 
     + config.XP.MIN;
-
-
-
   const newLevel =
     getLevel(database[id].xp);
 
@@ -183,17 +261,30 @@ client.on("messageCreate", async message=>{
   saveDatabase();
 
 
+  updateLeaderboard(message.guild);
+
+
+
 });
-// בדיקת מקום ראשון ונתינת XP_KING
+
+
+
+
+
+
+
+
+// XP_KING
 
 async function updateXPKing(guild){
 
 
-  const users = Object.entries(database)
-  
-  .filter(([id,data]) => data.xp > 0)
+  const users =
+    Object.entries(database)
 
-  .sort((a,b)=> b[1].xp - a[1].xp);
+    .filter(([id,data])=>data.xp > 0)
+
+    .sort((a,b)=>b[1].xp-a[1].xp);
 
 
 
@@ -201,7 +292,8 @@ async function updateXPKing(guild){
 
 
 
-  const kingId = users[0][0];
+  const kingId =
+    users[0][0];
 
 
 
@@ -224,37 +316,42 @@ async function updateXPKing(guild){
 
 
 
-    if(member){
-
-      if(id === kingId){
-
-        if(!member.roles.cache.has(role.id)){
-
-          await member.roles.add(role)
-          .catch(()=>{});
-
-        }
+    if(!member) continue;
 
 
-      } else {
+
+    if(id === kingId){
 
 
-        if(member.roles.cache.has(role.id)){
+      if(!member.roles.cache.has(role.id)){
 
-          await member.roles.remove(role)
-          .catch(()=>{});
+        await member.roles.add(role)
+        .catch(()=>{});
 
-        }
+      }
+
+
+    }else{
+
+
+      if(member.roles.cache.has(role.id)){
+
+
+        await member.roles.remove(role)
+        .catch(()=>{});
 
 
       }
 
+
     }
+
 
   }
 
 
 }
+
 
 
 
@@ -318,13 +415,14 @@ client.on("messageCreate", async message=>{
 
 
 
+
+
 // !xp
 
 client.on("messageCreate", async message=>{
 
 
   if(message.author.bot) return;
-
 
 
   if(!message.content.startsWith("!xp"))
@@ -353,12 +451,14 @@ client.on("messageCreate", async message=>{
       );
 
 
+
     setTimeout(()=>{
 
       msg.delete()
       .catch(()=>{});
 
     },2000);
+
 
 
     return;
@@ -381,8 +481,7 @@ client.on("messageCreate", async message=>{
 
 
 
-  if(!user || !amount)
-    return;
+  if(!user || !amount) return;
 
 
 
@@ -394,6 +493,7 @@ client.on("messageCreate", async message=>{
     database[user.id]={
 
       xp:0,
+
       level:1
 
     };
@@ -420,9 +520,13 @@ client.on("messageCreate", async message=>{
 
 
 
-
-
   await updateXPKing(
+    message.guild
+  );
+
+
+
+  updateLeaderboard(
     message.guild
   );
 
@@ -466,4 +570,11 @@ client.on("messageCreate", async message=>{
 
 
 });
+
+
+
+
+
+
+
 client.login(process.env.TOKEN);
