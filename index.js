@@ -311,5 +311,76 @@ client.on("interactionCreate", async interaction => {
 
 
 
+client.on("messageCreate", async message => {
 
+  if (message.author.bot) return;
+
+  if (message.content === "!leaderboard") {
+
+
+    if (database.leaderboard) {
+
+      try {
+
+        const channel = await client.channels.fetch(
+          database.leaderboard.channel
+        );
+
+        const oldMessage = await channel.messages.fetch(
+          database.leaderboard.message
+        );
+
+
+        await oldMessage.edit({
+
+          embeds: [
+            leaderboardEmbed("xp")
+          ],
+
+          components: [
+            leaderboardButtons()
+          ]
+
+        });
+
+        return;
+
+
+      } catch {
+
+        delete database.leaderboard;
+        saveDatabase();
+
+      }
+
+    }
+
+
+    const newMessage = await message.channel.send({
+
+      embeds: [
+        leaderboardEmbed("xp")
+      ],
+
+      components: [
+        leaderboardButtons()
+      ]
+
+    });
+
+
+    database.leaderboard = {
+
+      channel: message.channel.id,
+      message: newMessage.id
+
+    };
+
+
+    saveDatabase();
+
+
+  }
+
+});
 client.login(process.env.TOKEN);
