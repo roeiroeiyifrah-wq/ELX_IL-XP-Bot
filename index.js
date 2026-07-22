@@ -11,7 +11,7 @@ const fs = require("fs");
 const config = require("./config");
 
 const {
-  leaderboardEmbed,
+  createLeaderboard,
   leaderboardButtons
 } = require("./systems/leaderboard");
 
@@ -28,6 +28,7 @@ const client = new Client({
 });
 
 
+
 let database = {};
 
 
@@ -41,7 +42,7 @@ if (fs.existsSync("database.json")) {
 
 
 
-function saveDatabase() {
+function saveDatabase(){
 
   fs.writeFileSync(
     "database.json",
@@ -68,7 +69,7 @@ const levelRoles = {
 
 
 
-function getLevel(xp) {
+function getLevel(xp){
 
   return Math.floor(
     Math.sqrt(xp / 100)
@@ -78,7 +79,7 @@ function getLevel(xp) {
 
 
 
-client.once("ready", () => {
+client.once("ready",()=>{
 
   console.log(
     `✅ ELX_IL XP Bot מחובר בתור ${client.user.tag}`
@@ -113,12 +114,14 @@ client.on("messageCreate", async message => {
   const now = Date.now();
 
 
+
   if (
     cooldowns[userId] &&
     now - cooldowns[userId] < config.XP.MESSAGE_COOLDOWN
   ) {
     return;
   }
+
 
 
   cooldowns[userId] = now;
@@ -150,6 +153,7 @@ client.on("messageCreate", async message => {
   database[userId].level = newLevel;
 
 
+
   saveDatabase();
 
 
@@ -158,27 +162,34 @@ client.on("messageCreate", async message => {
 
 
 
-    const newRole = levelRoles[newLevel];
+    const role = levelRoles[newLevel];
 
 
-    if (newRole) {
 
-      await message.member.roles.add(newRole)
-        .catch(() => {});
+    if (role) {
 
 
-      for (const level in levelRoles) {
+      await message.member.roles.add(role)
+      .catch(()=>{});
 
-        if (Number(level) < newLevel) {
+
+
+      for (const lvl in levelRoles) {
+
+
+        if (Number(lvl) < newLevel) {
+
 
           await message.member.roles.remove(
-            levelRoles[level]
+            levelRoles[lvl]
           )
-          .catch(() => {});
+          .catch(()=>{});
+
 
         }
 
       }
+
 
     }
 
@@ -187,19 +198,21 @@ client.on("messageCreate", async message => {
 
     const embed = new EmbedBuilder()
 
-      .setTitle("🎉 Level Up!")
+    .setTitle("🎉 עלית רמה!")
 
-      .setDescription(
-        `🔥 ${message.author} עלה לרמה **${newLevel}**!\n\n⭐ XP: **${database[userId].xp}**`
-      )
+    .setDescription(
+      `🔥 ${message.author.username} עלה לרמה **${newLevel}**\n\n⭐ XP: **${database[userId].xp}**`
+    )
 
-      .setTimestamp();
+    .setTimestamp();
 
 
 
     message.channel.send({
 
-      embeds: [embed]
+      embeds:[
+        embed
+      ]
 
     });
 
@@ -213,7 +226,7 @@ client.on("messageCreate", async message => {
 
       message.author.send({
 
-        embeds: [
+        embeds:[
 
           new EmbedBuilder()
 
@@ -227,8 +240,7 @@ client.on("messageCreate", async message => {
 
         ]
 
-      })
-      .catch(() => {});
+      }).catch(()=>{});
 
 
 
@@ -236,6 +248,7 @@ client.on("messageCreate", async message => {
 
       saveDatabase();
 
+
     }
 
 
@@ -243,138 +256,115 @@ client.on("messageCreate", async message => {
 
 
 });
-client.on("interactionCreate", async interaction => {
-
-
-  if (!interaction.isButton()) return;
-
-
-
-  if (interaction.customId === "lb_xp") {
-
-    await interaction.update({
-
-      embeds: [
-        leaderboardEmbed("xp")
-      ],
-
-      components: [
-        leaderboardButtons()
-      ]
-
-    });
-
-  }
-
-
-
-
-  if (interaction.customId === "lb_level") {
-
-    await interaction.update({
-
-      embeds: [
-        leaderboardEmbed("level")
-      ],
-
-      components: [
-        leaderboardButtons()
-      ]
-
-    });
-
-  }
-
-
-
-
-  if (interaction.customId === "lb_streak") {
-
-    await interaction.update({
-
-      embeds: [
-        leaderboardEmbed("streak")
-      ],
-
-      components: [
-        leaderboardButtons()
-      ]
-
-    });
-
-  }
-
-
-
-});
-
-
-
-
 client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
 
+
   if (message.content === "!leaderboard") {
+
+
+    // רק צוות יכול ליצור/לעדכן לידרבורד
+    if (
+      !message.member.roles.cache.has(
+        "1524447926213017720"
+      )
+    ) {
+      return;
+    }
+
 
 
     if (database.leaderboard) {
 
+
       try {
 
-        const channel = await client.channels.fetch(
-          database.leaderboard.channel
-        );
 
-        const oldMessage = await channel.messages.fetch(
-          database.leaderboard.message
-        );
+        const channel =
+          await client.channels.fetch(
+            database.leaderboard.channel
+          );
+
+
+
+        const oldMessage =
+          await channel.messages.fetch(
+            database.leaderboard.message
+          );
+
 
 
         await oldMessage.edit({
 
-          embeds: [
-            leaderboardEmbed("xp")
+          embeds:[
+            await createLeaderboard(
+              client,
+              message.guild.id,
+              "xp"
+            )
           ],
 
-          components: [
+
+          components:[
             leaderboardButtons()
           ]
 
         });
 
+
         return;
+
 
 
       } catch {
 
+
         delete database.leaderboard;
+
         saveDatabase();
 
+
       }
+
 
     }
 
 
-    const newMessage = await message.channel.send({
 
-      embeds: [
-        leaderboardEmbed("xp")
-      ],
 
-      components: [
-        leaderboardButtons()
-      ]
+    const newMessage =
+      await message.channel.send({
 
-    });
+        embeds:[
+          await createLeaderboard(
+            client,
+            message.guild.id,
+            "xp"
+          )
+        ],
+
+
+        components:[
+          leaderboardButtons()
+        ]
+
+      });
+
+
 
 
     database.leaderboard = {
 
-      channel: message.channel.id,
-      message: newMessage.id
+      channel:
+      message.channel.id,
+
+
+      message:
+      newMessage.id
 
     };
+
 
 
     saveDatabase();
@@ -383,4 +373,70 @@ client.on("messageCreate", async message => {
   }
 
 });
+
+
+
+
+
+
+
+client.on("interactionCreate", async interaction => {
+
+
+  if (!interaction.isButton()) return;
+
+
+
+  let type = null;
+
+
+
+  if (interaction.customId === "lb_xp")
+    type = "xp";
+
+
+  if (interaction.customId === "lb_level")
+    type = "level";
+
+
+  if (interaction.customId === "lb_streak")
+    type = "streak";
+
+
+
+  if (!type) return;
+
+
+
+  await interaction.update({
+
+    embeds:[
+
+      await createLeaderboard(
+        client,
+        interaction.guild.id,
+        type
+      )
+
+    ],
+
+
+    components:[
+
+      leaderboardButtons()
+
+    ]
+
+  });
+
+
+
+});
+
+
+
+
+
+
+
 client.login(process.env.TOKEN);
