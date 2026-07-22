@@ -32,11 +32,9 @@ async function createLeaderboard(client, guildId){
 
   let players = Object.entries(database)
 
-  .filter(([id,data]) =>
-    data.xp > 0
-  )
+  .filter(([id,data]) => data.xp > 0)
 
-  .map(([id,data])=>{
+  .map(([id,data]) => {
 
 
     const member =
@@ -46,14 +44,11 @@ async function createLeaderboard(client, guildId){
 
     return {
 
-      name:
-      member
+      name: member
       ? member.user.username
       : "משתמש לא נמצא",
 
-
-      xp:
-      data.xp || 0
+      xp: data.xp || 0
 
     };
 
@@ -63,26 +58,12 @@ async function createLeaderboard(client, guildId){
 
 
   players.sort(
-    (a,b)=>b.xp-a.xp
+    (a,b)=> b.xp - a.xp
   );
 
 
 
-  players =
-    players.slice(0,10);
-
-
-
-  const embed =
-  new EmbedBuilder()
-
-  .setTitle("🏆 ELX_IL XP Leaderboard")
-
-  .setDescription(
-    "⭐ דירוג לפי XP בלבד"
-  )
-
-  .setTimestamp();
+  players = players.slice(0,10);
 
 
 
@@ -97,18 +78,15 @@ async function createLeaderboard(client, guildId){
       index === 0 ? "🥇" :
       index === 1 ? "🥈" :
       index === 2 ? "🥉" :
-      `${index+1}.`;
+      `${index + 1}.`;
 
 
 
     text +=
-
 `${place} **${player.name}**
 ⭐ XP: **${player.xp}**
 
 `;
-
-
 
   });
 
@@ -122,18 +100,28 @@ async function createLeaderboard(client, guildId){
 
 
 
-  embed.addFields({
+  const embed =
+  new EmbedBuilder()
+
+  .setTitle("🏆 ELX_IL XP Leaderboard")
+
+  .setDescription(
+    "⭐ דירוג לפי XP בלבד"
+  )
+
+  .addFields({
 
     name:"Top 10",
 
     value:text
 
-  });
+  })
+
+  .setTimestamp();
 
 
 
   return embed;
-
 
 }
 
