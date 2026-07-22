@@ -22,28 +22,61 @@ function loadDatabase() {
 
 
 
-async function getPlayers(client, guildId, type) {
+function calculateLevel(xp) {
+
+  return Math.floor(
+    Math.sqrt(xp / 100)
+  ) + 1;
+
+}
+
+
+
+async function createLeaderboard(client, guildId, type = "xp") {
+
 
   const database = loadDatabase();
+
 
   const guild = await client.guilds.fetch(guildId);
 
 
+
   let players = Object.entries(database)
+
   .filter(([id, data]) => data.xp > 0)
+
   .map(([id, data]) => {
 
-    const member = guild.members.cache.get(id);
+
+    const member =
+      guild.members.cache.get(id);
+
+
 
     return {
 
       id,
-      name: member ? member.user.username : "משתמש לא נמצא",
-      xp: data.xp || 0,
-      level: data.level || 1,
-      streak: data.streak || 0
+
+      name:
+      member
+      ? member.user.username
+      : "משתמש לא נמצא",
+
+
+      xp:
+      data.xp || 0,
+
+
+      level:
+      calculateLevel(data.xp || 0),
+
+
+      streak:
+      data.streak || 0
 
     };
+
 
   });
 
@@ -52,7 +85,7 @@ async function getPlayers(client, guildId, type) {
   if (type === "xp") {
 
     players.sort(
-      (a,b) => b.xp - a.xp
+      (a,b)=>b.xp-a.xp
     );
 
   }
@@ -61,7 +94,7 @@ async function getPlayers(client, guildId, type) {
   if (type === "level") {
 
     players.sort(
-      (a,b) => b.level - a.level
+      (a,b)=>b.level-a.level
     );
 
   }
@@ -70,37 +103,24 @@ async function getPlayers(client, guildId, type) {
   if (type === "streak") {
 
     players.sort(
-      (a,b) => b.streak - a.streak
+      (a,b)=>b.streak-a.streak
     );
 
   }
 
 
-  return players.slice(0,10);
 
-}
-
+  players = players.slice(0,10);
 
 
 
-
-async function createLeaderboard(client, guildId, type="xp") {
-
-
-  const players = await getPlayers(
-    client,
-    guildId,
-    type
-  );
-
-
-
-  const embed = new EmbedBuilder()
+  const embed =
+  new EmbedBuilder()
 
   .setTitle("🏆 דירוג ELX_IL")
 
   .setDescription(
-    "📊 עשרת השחקנים המובילים בשרת\n\n"
+    "📊 עשרת השחקנים המובילים\n\n"
   )
 
   .setTimestamp();
@@ -112,24 +132,27 @@ async function createLeaderboard(client, guildId, type="xp") {
 
     embed.addFields({
 
-      name: "אין עדיין דירוג",
+      name:"אין עדיין נתונים",
 
       value:
-      "🔥 אף משתמש עדיין לא צבר XP"
+      "🔥 אף משתמש לא צבר XP עדיין"
 
     });
+
 
 
   } else {
 
 
-    let text = "";
+
+    let table = "";
+
 
 
     players.forEach((player,index)=>{
 
 
-      const medal =
+      const place =
       index === 0 ? "🥇" :
       index === 1 ? "🥈" :
       index === 2 ? "🥉" :
@@ -137,15 +160,13 @@ async function createLeaderboard(client, guildId, type="xp") {
 
 
 
-      text +=
+      table +=
 
-`${medal} **${player.name}**
-
+`${place} **${player.name}**
 ⭐ רמה: ${player.level}
 💎 XP: ${player.xp}
 
 `;
-
 
     });
 
@@ -153,9 +174,9 @@ async function createLeaderboard(client, guildId, type="xp") {
 
     embed.addFields({
 
-      name: "🏆 Top 10",
+      name:"🏆 Top 10",
 
-      value: text
+      value:table
 
     });
 
@@ -167,7 +188,7 @@ async function createLeaderboard(client, guildId, type="xp") {
   embed.setFooter({
 
     text:
-    "בחר קטגוריה מהכפתורים למטה"
+    "הדירוג מתעדכן לפי נתוני השרת"
 
   });
 
@@ -188,35 +209,22 @@ return new ActionRowBuilder()
 
 .addComponents(
 
-
 new ButtonBuilder()
-
 .setCustomId("lb_xp")
-
 .setLabel("⭐ XP")
-
 .setStyle(ButtonStyle.Primary),
 
 
-
 new ButtonBuilder()
-
 .setCustomId("lb_level")
-
 .setLabel("📈 רמות")
-
 .setStyle(ButtonStyle.Success),
 
 
-
 new ButtonBuilder()
-
 .setCustomId("lb_streak")
-
 .setLabel("🔥 סטריק")
-
 .setStyle(ButtonStyle.Danger)
-
 
 );
 
@@ -228,7 +236,6 @@ new ButtonBuilder()
 module.exports = {
 
 createLeaderboard,
-
 leaderboardButtons
 
 };
