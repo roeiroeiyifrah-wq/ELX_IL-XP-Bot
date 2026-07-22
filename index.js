@@ -28,7 +28,6 @@ const client = new Client({
 });
 
 
-
 let database = {};
 
 
@@ -41,7 +40,6 @@ if (fs.existsSync("database.json")) {
 }
 
 
-
 function saveDatabase(){
 
   fs.writeFileSync(
@@ -52,9 +50,7 @@ function saveDatabase(){
 }
 
 
-
 const cooldowns = {};
-
 
 
 const levelRoles = {
@@ -68,7 +64,6 @@ const levelRoles = {
 };
 
 
-
 function getLevel(xp){
 
   return Math.floor(
@@ -76,7 +71,6 @@ function getLevel(xp){
   ) + 1;
 
 }
-
 
 
 client.once("ready",()=>{
@@ -119,7 +113,9 @@ client.on("messageCreate", async message => {
     cooldowns[userId] &&
     now - cooldowns[userId] < config.XP.MESSAGE_COOLDOWN
   ) {
+
     return;
+
   }
 
 
@@ -161,38 +157,31 @@ client.on("messageCreate", async message => {
   if (newLevel > oldLevel) {
 
 
-
     const role = levelRoles[newLevel];
 
 
 
-    if (role) {
-
+    if(role){
 
       await message.member.roles.add(role)
       .catch(()=>{});
 
 
 
-      for (const lvl in levelRoles) {
+      for(const lvl in levelRoles){
 
-
-        if (Number(lvl) < newLevel) {
-
+        if(Number(lvl) < newLevel){
 
           await message.member.roles.remove(
             levelRoles[lvl]
           )
           .catch(()=>{});
 
-
         }
 
       }
 
-
     }
-
 
 
 
@@ -210,18 +199,16 @@ client.on("messageCreate", async message => {
 
     message.channel.send({
 
-      embeds:[
-        embed
-      ]
+      embeds:[embed]
 
     });
 
 
 
-    if (
+    if(
       now - database[userId].lastLevelDM >
       config.LEVEL_DM_COOLDOWN
-    ) {
+    ){
 
 
       message.author.send({
@@ -259,33 +246,40 @@ client.on("messageCreate", async message => {
 client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
+  if (!message.guild) return;
+
 
 
   if (message.content === "!leaderboard") {
 
 
-    // רק צוות יכול ליצור/לעדכן לידרבורד
+
     if (
       !message.member.roles.cache.has(
         "1524447926213017720"
       )
     ) {
+
       return;
+
     }
 
 
 
-    if (database.leaderboard) {
+    await message.delete().catch(()=>{});
 
 
-      try {
+
+    if(database.leaderboard){
+
+
+      try{
 
 
         const channel =
           await client.channels.fetch(
             database.leaderboard.channel
           );
-
 
 
         const oldMessage =
@@ -298,19 +292,24 @@ client.on("messageCreate", async message => {
         await oldMessage.edit({
 
           embeds:[
+
             await createLeaderboard(
               client,
               message.guild.id,
               "xp"
             )
+
           ],
 
 
           components:[
+
             leaderboardButtons()
+
           ]
 
         });
+
 
 
         return;
@@ -337,20 +336,23 @@ client.on("messageCreate", async message => {
       await message.channel.send({
 
         embeds:[
+
           await createLeaderboard(
             client,
             message.guild.id,
             "xp"
           )
+
         ],
 
 
         components:[
+
           leaderboardButtons()
+
         ]
 
       });
-
 
 
 
@@ -379,7 +381,6 @@ client.on("messageCreate", async message => {
 
 
 
-
 client.on("interactionCreate", async interaction => {
 
 
@@ -391,20 +392,20 @@ client.on("interactionCreate", async interaction => {
 
 
 
-  if (interaction.customId === "lb_xp")
+  if(interaction.customId === "lb_xp")
     type = "xp";
 
 
-  if (interaction.customId === "lb_level")
+  if(interaction.customId === "lb_level")
     type = "level";
 
 
-  if (interaction.customId === "lb_streak")
+  if(interaction.customId === "lb_streak")
     type = "streak";
 
 
 
-  if (!type) return;
+  if(!type) return;
 
 
 
@@ -415,7 +416,8 @@ client.on("interactionCreate", async interaction => {
       await createLeaderboard(
         client,
         interaction.guild.id,
-        type
+        type,
+        interaction.user.id
       )
 
     ],
@@ -432,8 +434,6 @@ client.on("interactionCreate", async interaction => {
 
 
 });
-
-
 
 
 
