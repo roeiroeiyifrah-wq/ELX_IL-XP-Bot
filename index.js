@@ -10,7 +10,6 @@ const fs = require("fs");
 
 const config = require("./config");
 
-
 const {
   createLeaderboard
 } = require("./systems/leaderboard");
@@ -38,13 +37,9 @@ let database = {};
 
 if(fs.existsSync("database.json")){
 
-
   database = JSON.parse(
-
     fs.readFileSync("database.json")
-
   );
-
 
 }
 
@@ -52,15 +47,10 @@ if(fs.existsSync("database.json")){
 
 function saveDatabase(){
 
-
   fs.writeFileSync(
-
     "database.json",
-
     JSON.stringify(database,null,2)
-
   );
-
 
 }
 
@@ -73,13 +63,9 @@ const cooldowns = {};
 const levelRoles = {
 
   10: config.ROLES.LEVEL_10,
-
   20: config.ROLES.LEVEL_20,
-
   30: config.ROLES.LEVEL_30,
-
   40: config.ROLES.LEVEL_40,
-
   50: config.ROLES.LEVEL_50
 
 };
@@ -96,8 +82,6 @@ function getLevel(xp){
 
 
 
-
-
 client.once("ready",()=>{
 
   console.log(
@@ -110,9 +94,9 @@ client.once("ready",()=>{
 
 
 
-// מערכת XP מהודעות
+// XP מהודעות
 
-client.on("messageCreate", async message =>{
+client.on("messageCreate", async message=>{
 
 
   if(message.author.bot) return;
@@ -127,27 +111,20 @@ client.on("messageCreate", async message =>{
 
   if(!database[id]){
 
-
-    database[id] = {
+    database[id]={
 
       xp:0,
-
       level:1
 
     };
-
 
   }
 
 
 
-  const now = Date.now();
-
-
-
   if(
     cooldowns[id] &&
-    now - cooldowns[id] < config.XP.MESSAGE_COOLDOWN
+    Date.now()-cooldowns[id] < config.XP.MESSAGE_COOLDOWN
   ){
 
     return;
@@ -156,7 +133,7 @@ client.on("messageCreate", async message =>{
 
 
 
-  cooldowns[id] = now;
+  cooldowns[id]=Date.now();
 
 
 
@@ -168,8 +145,9 @@ client.on("messageCreate", async message =>{
 
       (config.XP.MAX - config.XP.MIN + 1)
 
-    ) + config.XP.MIN;
+    )
 
+    + config.XP.MIN;
 
 
 
@@ -182,6 +160,7 @@ client.on("messageCreate", async message =>{
 
 
     database[id].level = newLevel;
+
 
 
     const role =
@@ -204,220 +183,4 @@ client.on("messageCreate", async message =>{
   saveDatabase();
 
 
-
 });
-
-
-
-
-
-
-
-// !leaderboard
-
-client.on("messageCreate", async message =>{
-
-
-  if(message.author.bot) return;
-
-  if(!message.guild) return;
-
-
-
-  if(message.content === "!leaderboard"){
-
-
-    if(
-      !message.member.roles.cache.has(
-        "1524447926213017720"
-      )
-    ){
-
-      return;
-
-    }
-
-
-
-    await message.delete()
-    .catch(()=>{});
-
-
-
-    message.channel.send({
-
-      embeds:[
-
-        await createLeaderboard(
-
-          client,
-
-          message.guild.id
-
-        )
-
-      ]
-
-    });
-
-
-  }
-
-
-
-});
-
-
-
-
-
-
-
-
-// !xp
-
-client.on("messageCreate", async message =>{
-
-
-  if(message.author.bot) return;
-
-
-  if(!message.content.startsWith("!xp"))
-    return;
-
-
-
-  setTimeout(()=>{
-
-    message.delete()
-    .catch(()=>{});
-
-  },5000);
-
-
-
-
-
-  if(
-    message.author.id !==
-    "1243097719262941224"
-  ){
-
-
-    const msg =
-      await message.channel.send(
-        "❌ אין לך גישה"
-      );
-
-
-    setTimeout(()=>{
-
-      msg.delete()
-      .catch(()=>{});
-
-    },2000);
-
-
-    return;
-
-  }
-
-
-
-
-
-  const user =
-    message.mentions.users.first();
-
-
-
-  const amount =
-    Number(
-      message.content.split(" ")[2]
-    );
-
-
-
-  if(!user || !amount)
-    return;
-
-
-
-
-
-  if(!database[user.id]){
-
-
-    database[user.id] = {
-
-      xp:0,
-
-      level:1
-
-    };
-
-
-  }
-
-
-
-
-  database[user.id].xp += amount;
-
-
-  database[user.id].level =
-    getLevel(
-      database[user.id].xp
-    );
-
-
-
-  saveDatabase();
-
-
-
-
-
-
-  const owner =
-    await client.users.fetch(
-      "1243097719262941224"
-    );
-
-
-
-  owner.send({
-
-    embeds:[
-
-      new EmbedBuilder()
-
-      .setTitle("📌 XP Log")
-
-      .setDescription(
-
-        `👤 מי נתן:\n${message.author.username}\n\n`+
-
-        `🎯 למי:\n${user.username}\n\n`+
-
-        `⭐ כמות:\n${amount} XP`
-
-      )
-
-      .setTimestamp()
-
-    ]
-
-  }).catch(()=>{});
-
-
-
-});
-
-
-
-
-
-
-
-client.login(process.env.TOKEN);
