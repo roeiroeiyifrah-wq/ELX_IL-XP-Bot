@@ -19,6 +19,7 @@ const {
 
 
 
+
 // טעינת Slash Commands
 
 const commands = new Map();
@@ -27,9 +28,8 @@ const commands = new Map();
 if (fs.existsSync("./commands")) {
 
 
-  const commandFiles =
-    readdirSync("./commands")
-    .filter(file => file.endsWith(".js"));
+  const commandFiles = readdirSync("./commands")
+  .filter(file => file.endsWith(".js"));
 
 
 
@@ -63,13 +63,18 @@ const client = new Client({
   intents: [
 
     GatewayIntentBits.Guilds,
+
     GatewayIntentBits.GuildMessages,
+
     GatewayIntentBits.MessageContent,
+
     GatewayIntentBits.GuildMembers
 
   ]
 
 });
+
+
 
 
 
@@ -91,6 +96,8 @@ if (fs.existsSync("database.json")) {
 
 
 
+
+
 function saveDatabase(){
 
 
@@ -104,10 +111,10 @@ function saveDatabase(){
 
 
 }
-
-
-
 const cooldowns = {};
+
+
+
 const levelRoles = {
 
   10: config.ROLES.LEVEL_10,
@@ -124,6 +131,8 @@ const levelRoles = {
 
 
 
+
+
 function getLevel(xp){
 
 
@@ -135,6 +144,7 @@ function getLevel(xp){
 
 
 }
+
 
 
 
@@ -155,9 +165,11 @@ client.once("ready",()=>{
 
 
 
-// =======================
+
+
+// =====================
 // Slash Commands
-// =======================
+// =====================
 
 
 client.on("interactionCreate", async interaction => {
@@ -182,6 +194,7 @@ client.on("interactionCreate", async interaction => {
 
 
 
+
     try {
 
 
@@ -199,7 +212,7 @@ client.on("interactionCreate", async interaction => {
       if(!interaction.replied){
 
 
-        await interaction.reply({
+        interaction.reply({
 
           content:"❌ הייתה שגיאה בפקודה",
 
@@ -224,11 +237,11 @@ client.on("interactionCreate", async interaction => {
 
 
 
-
   // כפתורי לידרבורד
 
 
   if(!interaction.isButton()) return;
+
 
 
 
@@ -239,18 +252,6 @@ client.on("interactionCreate", async interaction => {
   if(interaction.customId === "lb_xp")
 
     type = "xp";
-
-
-
-  if(interaction.customId === "lb_level")
-
-    type = "level";
-
-
-
-  if(interaction.customId === "lb_streak")
-
-    type = "streak";
 
 
 
@@ -272,7 +273,7 @@ client.on("interactionCreate", async interaction => {
 
         interaction.guild.id,
 
-        type
+        "xp"
 
       )
 
@@ -312,22 +313,15 @@ client.on("messageCreate", async message => {
 
     database[userId] = {
 
-
       xp:0,
 
-      level:1,
-
-      streak:0,
-
-      bestStreak:0,
-
-      lastLevelDM:0
-
+      level:1
 
     };
 
 
   }
+
 
 
 
@@ -350,7 +344,10 @@ client.on("messageCreate", async message => {
 
 
 
+
+
   cooldowns[userId] = now;
+
 
 
 
@@ -358,6 +355,7 @@ client.on("messageCreate", async message => {
   const oldLevel =
 
     database[userId].level;
+
 
 
 
@@ -377,7 +375,9 @@ client.on("messageCreate", async message => {
 
 
 
+
   database[userId].xp += xpGain;
+
 
 
 
@@ -389,6 +389,7 @@ client.on("messageCreate", async message => {
       database[userId].xp
 
     );
+
 
 
 
@@ -419,16 +420,13 @@ client.on("messageCreate", async message => {
       .catch(()=>{});
 
 
-
     }
 
 
 
 
 
-    const embed =
-
-    new EmbedBuilder()
+    const embed = new EmbedBuilder()
 
 
     .setTitle("🎉 עלית רמה!")
@@ -442,6 +440,7 @@ client.on("messageCreate", async message => {
 
 
     .setTimestamp();
+
 
 
 
@@ -464,6 +463,9 @@ client.on("messageCreate", async message => {
 
 
 
+
+
+
 client.on("messageCreate", async message => {
 
 
@@ -471,6 +473,8 @@ client.on("messageCreate", async message => {
   if(message.author.bot) return;
 
   if(!message.guild) return;
+
+
 
 
 
@@ -494,11 +498,16 @@ client.on("messageCreate", async message => {
 
 
 
+
+
     await message.delete().catch(()=>{});
 
 
 
+
+
     const msg = await message.channel.send({
+
 
 
       embeds:[
@@ -516,6 +525,7 @@ client.on("messageCreate", async message => {
       ],
 
 
+
       components:[
 
         leaderboardButtons()
@@ -523,7 +533,10 @@ client.on("messageCreate", async message => {
       ]
 
 
+
     });
+
+
 
 
 
@@ -536,6 +549,8 @@ client.on("messageCreate", async message => {
 
 
     };
+
+
 
 
 
