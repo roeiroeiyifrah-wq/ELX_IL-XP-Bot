@@ -3,6 +3,7 @@ const {
 } = require("discord.js");
 
 const fs = require("fs");
+const config = require("./config");
 
 
 function loadDatabase(){
