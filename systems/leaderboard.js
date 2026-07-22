@@ -1,16 +1,13 @@
 const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
+  EmbedBuilder
 } = require("discord.js");
 
 const fs = require("fs");
 
 
-function loadDatabase() {
+function loadDatabase(){
 
-  if (!fs.existsSync("database.json")) {
+  if(!fs.existsSync("database.json")){
     return {};
   }
 
@@ -21,22 +18,8 @@ function loadDatabase() {
 }
 
 
-function calculateLevel(xp) {
 
-  return Math.floor(
-    Math.sqrt(xp / 100)
-  ) + 1;
-
-}
-
-
-
-async function createLeaderboard(
-  client,
-  guildId,
-  type = "xp",
-  viewerId
-) {
+async function createLeaderboard(client, guildId){
 
 
   const database = loadDatabase();
@@ -49,9 +32,11 @@ async function createLeaderboard(
 
   let players = Object.entries(database)
 
-  .filter(([id, data]) => data.xp > 0)
+  .filter(([id,data]) =>
+    data.xp > 0
+  )
 
-  .map(([id, data]) => {
+  .map(([id,data])=>{
 
 
     const member =
@@ -61,8 +46,6 @@ async function createLeaderboard(
 
     return {
 
-      id,
-
       name:
       member
       ? member.user.username
@@ -70,15 +53,7 @@ async function createLeaderboard(
 
 
       xp:
-      data.xp || 0,
-
-
-      level:
-      calculateLevel(data.xp || 0),
-
-
-      streak:
-      data.streak || 0
+      data.xp || 0
 
     };
 
@@ -87,107 +62,61 @@ async function createLeaderboard(
 
 
 
-  if(type === "xp") {
-
-    players.sort(
-      (a,b)=>b.xp-a.xp
-    );
-
-  }
-
-
-  if(type === "level") {
-
-    players.sort(
-      (a,b)=>b.level-a.level
-    );
-
-  }
-
-
-  if(type === "streak") {
-
-    players.sort(
-      (a,b)=>b.streak-a.streak
-    );
-
-  }
+  players.sort(
+    (a,b)=>b.xp-a.xp
+  );
 
 
 
-  const allPlayers = [...players];
-
-
-
-  const top10 =
+  players =
     players.slice(0,10);
-
-
-
-  const title =
-    type === "xp"
-    ? "🏆 דירוג ELX_IL - XP"
-    : type === "level"
-    ? "🏆 דירוג ELX_IL - רמות"
-    : "🏆 דירוג ELX_IL - סטריק";
 
 
 
   const embed =
   new EmbedBuilder()
 
-  .setTitle(title)
+  .setTitle("🏆 ELX_IL XP Leaderboard")
 
   .setDescription(
-    "📊 עשרת השחקנים המובילים בשרת\n"
+    "⭐ דירוג לפי XP בלבד"
   )
 
   .setTimestamp();
 
 
 
-  let table = "";
+  let text = "";
 
 
 
-  for(let i = 0; i < 10; i++){
-
-
-    const player = top10[i];
+  players.forEach((player,index)=>{
 
 
     const place =
-      i === 0 ? "🥇" :
-      i === 1 ? "🥈" :
-      i === 2 ? "🥉" :
-      `${i+1}️⃣`;
+      index === 0 ? "🥇" :
+      index === 1 ? "🥈" :
+      index === 2 ? "🥉" :
+      `${index+1}.`;
 
 
 
-    if(player){
-
-
-      table +=
+    text +=
 
 `${place} **${player.name}**
-⭐ רמה: ${player.level}
-💎 XP: ${player.xp}
+⭐ XP: **${player.xp}**
 
 `;
 
-    } else {
 
 
-      table +=
+  });
 
-`${place} **אין שחקן**
-⭐ רמה: -
-💎 XP: -
 
-`;
 
-    }
+  if(!text){
 
+    text = "אין עדיין נתוני XP";
 
   }
 
@@ -195,92 +124,15 @@ async function createLeaderboard(
 
   embed.addFields({
 
-    name:"🏆 Top 10",
+    name:"Top 10",
 
-    value:table
-
-  });
-
-
-
-  const myPlace =
-    allPlayers.findIndex(
-      p => p.id === viewerId
-    ) + 1;
-
-
-
-  if(
-    viewerId &&
-    myPlace > 10 &&
-    allPlayers[myPlace - 1]
-  ){
-
-    const me =
-      allPlayers[myPlace - 1];
-
-
-    embed.addFields({
-
-      name:"📍 המקום שלך",
-
-      value:
-`#${myPlace} **${me.name}**
-⭐ רמה: ${me.level}
-💎 XP: ${me.xp}`
-
-    });
-
-  }
-
-
-
-  embed.setFooter({
-
-    text:
-    type === "xp"
-    ? "דירוג לפי XP 💎"
-    : type === "level"
-    ? "דירוג לפי רמות 📈"
-    : "דירוג לפי סטריק 🔥"
+    value:text
 
   });
 
 
 
   return embed;
-
-}
-
-
-
-
-
-function leaderboardButtons(){
-
-
-return new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("lb_xp")
-.setLabel("⭐ XP")
-.setStyle(ButtonStyle.Primary),
-
-
-new ButtonBuilder()
-.setCustomId("lb_level")
-.setLabel("📈 רמות")
-.setStyle(ButtonStyle.Success),
-
-
-new ButtonBuilder()
-.setCustomId("lb_streak")
-.setLabel("🔥 סטריק")
-.setStyle(ButtonStyle.Danger)
-
-);
 
 
 }
@@ -289,8 +141,6 @@ new ButtonBuilder()
 
 module.exports = {
 
-createLeaderboard,
-
-leaderboardButtons
+  createLeaderboard
 
 };
