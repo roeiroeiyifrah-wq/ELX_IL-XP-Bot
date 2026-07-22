@@ -7,7 +7,13 @@ const {
 } = require("discord.js");
 
 const fs = require("fs");
+
 const config = require("./config");
+
+const {
+  leaderboardEmbed,
+  leaderboardButtons
+} = require("./systems/leaderboard");
 
 
 const client = new Client({
@@ -34,6 +40,7 @@ if (fs.existsSync("database.json")) {
 }
 
 
+
 function saveDatabase() {
 
   fs.writeFileSync(
@@ -44,7 +51,9 @@ function saveDatabase() {
 }
 
 
+
 const cooldowns = {};
+
 
 
 const levelRoles = {
@@ -58,11 +67,15 @@ const levelRoles = {
 };
 
 
+
 function getLevel(xp) {
 
-  return Math.floor(Math.sqrt(xp / 100)) + 1;
+  return Math.floor(
+    Math.sqrt(xp / 100)
+  ) + 1;
 
 }
+
 
 
 client.once("ready", () => {
@@ -96,6 +109,7 @@ client.on("messageCreate", async message => {
   }
 
 
+
   const now = Date.now();
 
 
@@ -110,7 +124,9 @@ client.on("messageCreate", async message => {
   cooldowns[userId] = now;
 
 
+
   const oldLevel = database[userId].level;
+
 
 
   const xpGain =
@@ -121,12 +137,14 @@ client.on("messageCreate", async message => {
     + config.XP.MIN;
 
 
+
   database[userId].xp += xpGain;
 
 
-  const newLevel = getLevel(
-    database[userId].xp
-  );
+
+  const newLevel =
+    getLevel(database[userId].xp);
+
 
 
   database[userId].level = newLevel;
@@ -139,12 +157,13 @@ client.on("messageCreate", async message => {
   if (newLevel > oldLevel) {
 
 
-    const role = levelRoles[newLevel];
+
+    const newRole = levelRoles[newLevel];
 
 
-    if (role) {
+    if (newRole) {
 
-      await message.member.roles.add(role)
+      await message.member.roles.add(newRole)
         .catch(() => {});
 
 
@@ -164,12 +183,14 @@ client.on("messageCreate", async message => {
     }
 
 
+
+
     const embed = new EmbedBuilder()
 
-      .setTitle("🎉 עלית רמה!")
+      .setTitle("🎉 Level Up!")
 
       .setDescription(
-        `🔥 ${message.author} הגיע לרמה **${newLevel}**!\n\n⭐ XP: **${database[userId].xp}**`
+        `🔥 ${message.author} עלה לרמה **${newLevel}**!\n\n⭐ XP: **${database[userId].xp}**`
       )
 
       .setTimestamp();
@@ -177,8 +198,11 @@ client.on("messageCreate", async message => {
 
 
     message.channel.send({
+
       embeds: [embed]
+
     });
+
 
 
     if (
@@ -193,7 +217,7 @@ client.on("messageCreate", async message => {
 
           new EmbedBuilder()
 
-          .setTitle("🏆 Level Up!")
+          .setTitle("🏆 עלית רמה!")
 
           .setDescription(
             `עלית לרמה **${newLevel}** בשרת ELX_IL 🔥`
@@ -207,7 +231,9 @@ client.on("messageCreate", async message => {
       .catch(() => {});
 
 
+
       database[userId].lastLevelDM = now;
+
       saveDatabase();
 
     }
@@ -217,4 +243,73 @@ client.on("messageCreate", async message => {
 
 
 });
+client.on("interactionCreate", async interaction => {
+
+
+  if (!interaction.isButton()) return;
+
+
+
+  if (interaction.customId === "lb_xp") {
+
+    await interaction.update({
+
+      embeds: [
+        leaderboardEmbed("xp")
+      ],
+
+      components: [
+        leaderboardButtons()
+      ]
+
+    });
+
+  }
+
+
+
+
+  if (interaction.customId === "lb_level") {
+
+    await interaction.update({
+
+      embeds: [
+        leaderboardEmbed("level")
+      ],
+
+      components: [
+        leaderboardButtons()
+      ]
+
+    });
+
+  }
+
+
+
+
+  if (interaction.customId === "lb_streak") {
+
+    await interaction.update({
+
+      embeds: [
+        leaderboardEmbed("streak")
+      ],
+
+      components: [
+        leaderboardButtons()
+      ]
+
+    });
+
+  }
+
+
+
+});
+
+
+
+
+
 client.login(process.env.TOKEN);
