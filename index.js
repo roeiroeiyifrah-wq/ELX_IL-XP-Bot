@@ -1,19 +1,27 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder
+} = require("discord.js");
+
 const fs = require("fs");
+
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMembers
   ]
 });
 
+
 const TOKEN = process.env.TOKEN;
+const GUILD_ID = process.env.GUILD_ID;
+
 
 let database = {};
 
@@ -23,6 +31,7 @@ if (fs.existsSync("database.json")) {
   );
 }
 
+
 function saveDatabase() {
   fs.writeFileSync(
     "database.json",
@@ -31,43 +40,35 @@ function saveDatabase() {
 }
 
 
-const cooldowns = {};
+const cooldown = {};
+
+
+function getLevel(xp) {
+  return Math.floor(Math.sqrt(xp / 100)) + 1;
+}
 
 
 client.once("ready", () => {
-  console.log(`✅ ELX_IL XP Bot מחובר בתור ${client.user.tag}`);
+
+  console.log(
+    `✅ ELX_IL XP Bot מחובר בתור ${client.user.tag}`
+  );
+
 });
 
 
-client.on("messageCreate", message => {
+client.on("messageCreate", async message => {
 
-  // לא נותן XP לבוטים
+
   if (message.author.bot) return;
+
+
+  if (!message.guild) return;
 
 
   const userId = message.author.id;
 
 
-  // פחות משתי מילים לא נותן XP
-  if (message.content.trim().split(/\s+/).length < 2) {
-    return;
-  }
-
-
-  // מניעת ספאם 20 שניות
-  const now = Date.now();
-
-  if (
-    cooldowns[userId] &&
-    now - cooldowns[userId] < 20000
-  ) {
-    return;
-  }
-
-  cooldowns[userId] = now;
-
-
-  // יצירת משתמש חדש
   if (!database[userId]) {
 
     database[userId] = {
@@ -80,14 +81,65 @@ client.on("messageCreate", message => {
   }
 
 
-  // כמות XP אקראית
-  const xpGain = Math.floor(Math.random() * 6) + 5;
+
+  const now = Date.now();
 
 
-  database[userId].xp += xpGain;
+  if (
+    cooldown[userId] &&
+    now - cooldown[userId] < 20000
+  ) {
+    return;
+  }
+
+
+  cooldown[userId] = now;
+
+
+
+  const oldLevel = database[userId].level;
+
+
+  const xpAdd = Math.floor(Math.random() * 10) + 5;
+
+
+  database[userId].xp += xpAdd;
+
+
+  const newLevel = getLevel(
+    database[userId].xp
+  );
+
+
+  database[userId].level = newLevel;
 
 
   saveDatabase();
+
+
+
+  if (newLevel > oldLevel) {
+
+
+    const embed = new EmbedBuilder()
+
+      .setTitle("🎉 Level Up!")
+
+      .setDescription(
+        `🔥 ${message.author} עלה לרמה **${newLevel}**!\n\n⭐ XP: ${database[userId].xp}`
+      )
+
+      .setTimestamp();
+
+
+
+    message.channel.send({
+      embeds: [embed]
+    });
+
+
+  }
+
 
 });
 
