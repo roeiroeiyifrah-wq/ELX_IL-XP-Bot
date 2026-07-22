@@ -31,13 +31,19 @@ function calculateLevel(xp) {
 
 
 
-async function createLeaderboard(client, guildId, type = "xp") {
+async function createLeaderboard(
+  client,
+  guildId,
+  type = "xp",
+  viewerId
+) {
 
 
   const database = loadDatabase();
 
 
-  const guild = await client.guilds.fetch(guildId);
+  const guild =
+    await client.guilds.fetch(guildId);
 
 
 
@@ -55,7 +61,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
     return {
 
-      id: id,
+      id,
 
       name:
       member
@@ -81,7 +87,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
 
 
-  if (type === "xp") {
+  if(type === "xp") {
 
     players.sort(
       (a,b)=>b.xp-a.xp
@@ -90,7 +96,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
   }
 
 
-  if (type === "level") {
+  if(type === "level") {
 
     players.sort(
       (a,b)=>b.level-a.level
@@ -99,7 +105,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
   }
 
 
-  if (type === "streak") {
+  if(type === "streak") {
 
     players.sort(
       (a,b)=>b.streak-a.streak
@@ -107,6 +113,9 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
   }
 
+
+
+  const allPlayers = [...players];
 
 
   players = players.slice(0,10);
@@ -119,7 +128,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
   .setTitle("🏆 דירוג ELX_IL")
 
   .setDescription(
-    "📊 עשרת המקומות הראשונים בשרת\n\n"
+    "📊 עשרת השחקנים המובילים בשרת\n"
   )
 
   .setTimestamp();
@@ -130,38 +139,33 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
 
 
-  for (let i = 0; i < 10; i++) {
+  for(let i = 0; i < 10; i++){
 
 
     const player = players[i];
-
 
 
     const place =
       i === 0 ? "🥇" :
       i === 1 ? "🥈" :
       i === 2 ? "🥉" :
-      `${i + 1}️⃣`;
+      `${i+1}️⃣`;
 
 
 
-    if (player) {
-
+    if(player){
 
       table +=
-
 `${place} **${player.name}**
 ⭐ רמה: ${player.level}
 💎 XP: ${player.xp}
 
 `;
 
-
     } else {
 
 
       table +=
-
 `${place} **אין שחקן**
 ⭐ רמה: -
 💎 XP: -
@@ -169,7 +173,6 @@ async function createLeaderboard(client, guildId, type = "xp") {
 `;
 
     }
-
 
   }
 
@@ -182,6 +185,40 @@ async function createLeaderboard(client, guildId, type = "xp") {
     value:table
 
   });
+
+
+
+
+  const myPlace =
+    allPlayers.findIndex(
+      p => p.id === viewerId
+    ) + 1;
+
+
+
+  if(
+    viewerId &&
+    myPlace > 10 &&
+    allPlayers[myPlace-1]
+  ){
+
+    const me =
+      allPlayers[myPlace-1];
+
+
+    embed.addFields({
+
+      name:"📍 המקום שלך",
+
+      value:
+`#${myPlace} **${me.name}**
+⭐ רמה: ${me.level}
+💎 XP: ${me.xp}`
+
+    });
+
+
+  }
 
 
 
@@ -201,6 +238,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
 
 
+
 function leaderboardButtons(){
 
 
@@ -208,12 +246,10 @@ return new ActionRowBuilder()
 
 .addComponents(
 
-
 new ButtonBuilder()
 .setCustomId("lb_xp")
 .setLabel("⭐ XP")
 .setStyle(ButtonStyle.Primary),
-
 
 
 new ButtonBuilder()
@@ -222,18 +258,15 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Success),
 
 
-
 new ButtonBuilder()
 .setCustomId("lb_streak")
 .setLabel("🔥 סטריק")
 .setStyle(ButtonStyle.Danger)
 
-
 );
 
 
 }
-
 
 
 
