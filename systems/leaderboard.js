@@ -32,6 +32,8 @@ async function createLeaderboard(client, guildId){
 
   let players = Object.entries(database)
 
+  .filter(([id,data]) => data.xp > 0)
+
   .map(([id,data])=>{
 
 
@@ -70,21 +72,18 @@ async function createLeaderboard(client, guildId){
   for(let i = 0; i < 10; i++){
 
 
-    const player =
-      players[i];
-
+    const player = players[i];
 
 
     const place =
       i === 0 ? "🥇" :
       i === 1 ? "🥈" :
       i === 2 ? "🥉" :
-      `${i+1}.`;
+      `${i + 1}.`;
 
 
 
     if(player){
-
 
       text +=
 `${place} **${player.name}**
@@ -92,10 +91,7 @@ async function createLeaderboard(client, guildId){
 
 `;
 
-
-
     } else {
-
 
       text +=
 `${place} **אין שם**
@@ -105,21 +101,15 @@ async function createLeaderboard(client, guildId){
 
     }
 
-
   }
 
 
 
-
-
-  const embed =
-  new EmbedBuilder()
+  return new EmbedBuilder()
 
   .setTitle("🏆 ELX_IL XP Leaderboard")
 
-  .setDescription(
-    "⭐ דירוג XP"
-  )
+  .setDescription("⭐ דירוג לפי XP בלבד")
 
   .addFields({
 
@@ -132,16 +122,10 @@ async function createLeaderboard(client, guildId){
   .setTimestamp();
 
 
-
-  return embed;
-
-
 }
 
 
 
 module.exports = {
-
   createLeaderboard
-
 };
