@@ -7,6 +7,7 @@ const {
 } = require("discord.js");
 
 const fs = require("fs");
+const { readdirSync } = require("fs");
 
 const config = require("./config");
 
@@ -20,6 +21,45 @@ const {
 const {
   createProfile
 } = require("./systems/profile");
+
+
+
+// טעינת Slash Commands
+
+const commands = new Map();
+
+
+if (fs.existsSync("./commands")) {
+
+
+  const commandFiles =
+    readdirSync("./commands")
+    .filter(file => file.endsWith(".js"));
+
+
+
+  for (const file of commandFiles) {
+
+
+    const command =
+      require(`./commands/${file}`);
+
+
+
+    commands.set(
+
+      command.data.name,
+
+      command
+
+    );
+
+
+  }
+
+}
+
+
 
 
 
@@ -73,11 +113,7 @@ function saveDatabase(){
 
 
 const cooldowns = {};
-
-
-
 const levelRoles = {
-
 
   10: config.ROLES.LEVEL_10,
 
@@ -89,9 +125,7 @@ const levelRoles = {
 
   50: config.ROLES.LEVEL_50
 
-
 };
-
 
 
 
@@ -110,7 +144,6 @@ function getLevel(xp){
 
 
 
-
 client.once("ready",()=>{
 
 
@@ -119,6 +152,150 @@ client.once("ready",()=>{
     `✅ ELX_IL XP Bot מחובר בתור ${client.user.tag}`
 
   );
+
+
+});
+
+
+
+
+
+// =======================
+// Slash Commands
+// =======================
+
+
+client.on("interactionCreate", async interaction => {
+
+
+
+  if(interaction.isChatInputCommand()){
+
+
+
+    const command =
+
+      commands.get(
+
+        interaction.commandName
+
+      );
+
+
+
+    if(!command) return;
+
+
+
+    try {
+
+
+      await command.execute(interaction);
+
+
+
+    } catch(error){
+
+
+      console.error(error);
+
+
+
+      if(!interaction.replied){
+
+
+        await interaction.reply({
+
+          content:"❌ הייתה שגיאה בפקודה",
+
+          ephemeral:true
+
+        });
+
+
+      }
+
+
+    }
+
+
+
+    return;
+
+
+  }
+
+
+
+
+
+
+  // כפתורי לידרבורד
+
+
+  if(!interaction.isButton()) return;
+
+
+
+  let type = null;
+
+
+
+  if(interaction.customId === "lb_xp")
+
+    type = "xp";
+
+
+
+  if(interaction.customId === "lb_level")
+
+    type = "level";
+
+
+
+  if(interaction.customId === "lb_streak")
+
+    type = "streak";
+
+
+
+  if(!type) return;
+
+
+
+
+  await interaction.update({
+
+
+
+    embeds:[
+
+
+      await createLeaderboard(
+
+        client,
+
+        interaction.guild.id,
+
+        type
+
+      )
+
+
+    ],
+
+
+
+    components:[
+
+      leaderboardButtons()
+
+    ]
+
+
+
+  });
+
 
 
 });
@@ -159,6 +336,7 @@ client.on("messageCreate", async message => {
 
 
 
+
   const now = Date.now();
 
 
@@ -181,8 +359,11 @@ client.on("messageCreate", async message => {
 
 
 
+
   const oldLevel =
+
     database[userId].level;
+
 
 
 
@@ -200,7 +381,9 @@ client.on("messageCreate", async message => {
 
 
 
+
   database[userId].xp += xpGain;
+
 
 
 
@@ -214,11 +397,13 @@ client.on("messageCreate", async message => {
 
 
 
+
   database[userId].level = newLevel;
 
 
 
   saveDatabase();
+
 
 
 
@@ -240,33 +425,15 @@ client.on("messageCreate", async message => {
 
 
 
-      for(const lvl in levelRoles){
-
-
-        if(Number(lvl) < newLevel){
-
-
-          await message.member.roles.remove(
-
-            levelRoles[lvl]
-
-          )
-
-          .catch(()=>{});
-
-
-        }
-
-
-      }
-
-
     }
 
 
 
 
-    const embed = new EmbedBuilder()
+
+    const embed =
+
+    new EmbedBuilder()
 
 
     .setTitle("🎉 עלית רמה!")
@@ -292,70 +459,24 @@ client.on("messageCreate", async message => {
 
 
 
-
-
-    if(
-
-      now - database[userId].lastLevelDM >
-
-      config.LEVEL_DM_COOLDOWN
-
-    ){
-
-
-
-      message.author.send({
-
-        embeds:[
-
-
-          new EmbedBuilder()
-
-          .setTitle("🏆 עלית רמה!")
-
-          .setDescription(
-
-            `עלית לרמה **${newLevel}** בשרת ELX_IL 🔥`
-
-          )
-
-          .setTimestamp()
-
-
-        ]
-
-      }).catch(()=>{});
-
-
-
-
-      database[userId].lastLevelDM = now;
-
-
-      saveDatabase();
-
-
-
-    }
-
-
   }
 
 
 
 });
+
+
+
+
+
 client.on("messageCreate", async message => {
+
 
 
   if(message.author.bot) return;
 
   if(!message.guild) return;
 
-
-
-  // =================
-  // LEADERBOARD
-  // =================
 
 
   if(message.content === "!leaderboard"){
@@ -416,7 +537,6 @@ client.on("messageCreate", async message => {
 
       channel: message.channel.id,
 
-
       message: msg.id
 
 
@@ -429,214 +549,6 @@ client.on("messageCreate", async message => {
 
 
   }
-
-
-
-
-
-
-  // =================
-  // PROFILE
-  // =================
-
-
-
-  if(message.content.startsWith("!profile")){
-
-
-
-    const target =
-
-      message.mentions.members.first();
-
-
-
-
-    // בדיקה אם מנסים לראות מישהו אחר
-
-
-    if(target){
-
-
-
-      if(
-
-        !message.member.roles.cache.has(
-
-          "1524447926213017720"
-
-        )
-
-      ){
-
-
-        await message.delete().catch(()=>{});
-
-        return;
-
-
-      }
-
-
-
-
-      const profileMessage =
-
-        await message.channel.send({
-
-
-          embeds:[
-
-            createProfile(target)
-
-          ]
-
-
-        });
-
-
-
-
-      setTimeout(()=>{
-
-
-        profileMessage.delete()
-
-        .catch(()=>{});
-
-
-
-      },10000);
-
-
-
-      return;
-
-
-
-    }
-
-
-
-
-    // פרופיל עצמי
-
-
-
-    const profileMessage =
-
-      await message.channel.send({
-
-
-        embeds:[
-
-          createProfile(message.member)
-
-        ]
-
-
-      });
-
-
-
-
-    setTimeout(()=>{
-
-
-      profileMessage.delete()
-
-      .catch(()=>{});
-
-
-
-    },10000);
-
-
-
-  }
-
-
-
-
-});
-
-
-
-
-
-
-
-client.on("interactionCreate", async interaction => {
-
-
-
-  if(!interaction.isButton()) return;
-
-
-
-  let type = null;
-
-
-
-
-  if(interaction.customId === "lb_xp")
-
-    type = "xp";
-
-
-
-  if(interaction.customId === "lb_level")
-
-    type = "level";
-
-
-
-  if(interaction.customId === "lb_streak")
-
-    type = "streak";
-
-
-
-
-
-  if(!type) return;
-
-
-
-
-  await interaction.update({
-
-
-
-    embeds:[
-
-
-      await createLeaderboard(
-
-        client,
-
-        interaction.guild.id,
-
-        type,
-
-        interaction.user.id
-
-      )
-
-
-    ],
-
-
-
-    components:[
-
-      leaderboardButtons()
-
-    ]
-
-
-
-  });
 
 
 
