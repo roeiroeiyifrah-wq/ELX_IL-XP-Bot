@@ -7,61 +7,46 @@ const {
 
 const fs = require("fs");
 
-const config = require("../config");
 
+function loadDatabase() {
 
-function getFakePlayers() {
+  if (!fs.existsSync("database.json")) {
+    return {};
+  }
 
-  return [
-    { name: "NoLife_Gamer", xp: 999999, level: 99 },
-    { name: "BananaKing 🍌", xp: 888888, level: 88 },
-    { name: "XP_Monster", xp: 777777, level: 77 },
-    { name: "KeyboardWarrior", xp: 666666, level: 66 },
-    { name: "AFK_Legend", xp: 555555, level: 55 },
-    { name: "WiFi_Hunter", xp: 444444, level: 44 },
-    { name: "Loading_99%", xp: 333333, level: 33 },
-    { name: "TheRealBot", xp: 222222, level: 22 },
-    { name: "Grass_Toucher", xp: 111111, level: 11 },
-    { name: "PotatoDestroyer", xp: 99999, level: 10 }
-  ];
+  return JSON.parse(
+    fs.readFileSync("database.json")
+  );
 
 }
 
 
-function createLeaderboard(type) {
 
+async function getPlayers(client, guildId, type) {
 
-  let database = {};
+  const database = loadDatabase();
 
-  if (fs.existsSync("database.json")) {
-
-    database = JSON.parse(
-      fs.readFileSync("database.json")
-    );
-
-  }
+  const guild = await client.guilds.fetch(guildId);
 
 
   let players = Object.entries(database)
-    .map(([id, data]) => {
+  .filter(([id, data]) => data.xp > 0)
+  .map(([id, data]) => {
 
-      return {
-        id,
-        xp: data.xp || 0,
-        level: data.level || 1,
-        streak: data.streak || 0
-      };
+    const member = guild.members.cache.get(id);
 
-    });
+    return {
 
+      id,
+      name: member ? member.user.username : "משתמש לא נמצא",
+      xp: data.xp || 0,
+      level: data.level || 1,
+      streak: data.streak || 0
 
-  if (players.length < 10) {
+    };
 
-    players = players.concat(
-      getFakePlayers()
-    );
+  });
 
-  }
 
 
   if (type === "xp") {
@@ -97,83 +82,153 @@ function createLeaderboard(type) {
 
 
 
-function leaderboardEmbed(type) {
 
 
-  const players = createLeaderboard(type);
+async function createLeaderboard(client, guildId, type="xp") {
 
 
-  let text = "";
+  const players = await getPlayers(
+    client,
+    guildId,
+    type
+  );
 
 
-  players.forEach((player,index)=>{
+
+  const embed = new EmbedBuilder()
+
+  .setTitle("🏆 דירוג ELX_IL")
+
+  .setDescription(
+    "📊 עשרת השחקנים המובילים בשרת\n\n"
+  )
+
+  .setTimestamp();
 
 
-    let medal =
+
+  if (players.length === 0) {
+
+
+    embed.addFields({
+
+      name: "אין עדיין דירוג",
+
+      value:
+      "🔥 אף משתמש עדיין לא צבר XP"
+
+    });
+
+
+  } else {
+
+
+    let text = "";
+
+
+    players.forEach((player,index)=>{
+
+
+      const medal =
       index === 0 ? "🥇" :
       index === 1 ? "🥈" :
       index === 2 ? "🥉" :
       `${index+1}.`;
 
 
-    text +=
-`${medal} **${player.name || "Player"}**
-⭐ Level: ${player.level}
+
+      text +=
+
+`${medal} **${player.name}**
+
+⭐ רמה: ${player.level}
 💎 XP: ${player.xp}
 
 `;
+
+
+    });
+
+
+
+    embed.addFields({
+
+      name: "🏆 Top 10",
+
+      value: text
+
+    });
+
+
+  }
+
+
+
+  embed.setFooter({
+
+    text:
+    "בחר קטגוריה מהכפתורים למטה"
 
   });
 
 
 
-  return new EmbedBuilder()
-
-    .setTitle("🏆 ELX_IL GLOBAL LEADERBOARD")
-
-    .setDescription(text)
-
-    .setFooter({
-      text:"Choose a category below 🔥"
-    })
-
-    .setTimestamp();
+  return embed;
 
 }
+
+
 
 
 
 function leaderboardButtons(){
 
 
-  return new ActionRowBuilder()
+return new ActionRowBuilder()
 
-  .addComponents(
-
-    new ButtonBuilder()
-    .setCustomId("lb_xp")
-    .setLabel("⭐ XP")
-    .setStyle(ButtonStyle.Primary),
+.addComponents(
 
 
-    new ButtonBuilder()
-    .setCustomId("lb_level")
-    .setLabel("📈 Levels")
-    .setStyle(ButtonStyle.Success),
+new ButtonBuilder()
+
+.setCustomId("lb_xp")
+
+.setLabel("⭐ XP")
+
+.setStyle(ButtonStyle.Primary),
 
 
-    new ButtonBuilder()
-    .setCustomId("lb_streak")
-    .setLabel("🔥 Streak")
-    .setStyle(ButtonStyle.Danger)
 
-  );
+new ButtonBuilder()
+
+.setCustomId("lb_level")
+
+.setLabel("📈 רמות")
+
+.setStyle(ButtonStyle.Success),
+
+
+
+new ButtonBuilder()
+
+.setCustomId("lb_streak")
+
+.setLabel("🔥 סטריק")
+
+.setStyle(ButtonStyle.Danger)
+
+
+);
+
 
 }
 
 
 
 module.exports = {
-  leaderboardEmbed,
-  leaderboardButtons
+
+createLeaderboard,
+
+leaderboardButtons
+
 };
