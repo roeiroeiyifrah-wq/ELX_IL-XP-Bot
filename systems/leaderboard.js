@@ -21,7 +21,6 @@ function loadDatabase() {
 }
 
 
-
 function calculateLevel(xp) {
 
   return Math.floor(
@@ -56,7 +55,7 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
     return {
 
-      id,
+      id: id,
 
       name:
       member
@@ -120,44 +119,33 @@ async function createLeaderboard(client, guildId, type = "xp") {
   .setTitle("🏆 דירוג ELX_IL")
 
   .setDescription(
-    "📊 עשרת השחקנים המובילים\n\n"
+    "📊 עשרת המקומות הראשונים בשרת\n\n"
   )
 
   .setTimestamp();
 
 
 
-  if (players.length === 0) {
-
-
-    embed.addFields({
-
-      name:"אין עדיין נתונים",
-
-      value:
-      "🔥 אף משתמש לא צבר XP עדיין"
-
-    });
+  let table = "";
 
 
 
-  } else {
+  for (let i = 0; i < 10; i++) {
+
+
+    const player = players[i];
 
 
 
-    let table = "";
+    const place =
+      i === 0 ? "🥇" :
+      i === 1 ? "🥈" :
+      i === 2 ? "🥉" :
+      `${i + 1}️⃣`;
 
 
 
-    players.forEach((player,index)=>{
-
-
-      const place =
-      index === 0 ? "🥇" :
-      index === 1 ? "🥈" :
-      index === 2 ? "🥉" :
-      `${index+1}.`;
-
+    if (player) {
 
 
       table +=
@@ -168,27 +156,39 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
 `;
 
-    });
+
+    } else {
 
 
+      table +=
 
-    embed.addFields({
+`${place} **אין שחקן**
+⭐ רמה: -
+💎 XP: -
 
-      name:"🏆 Top 10",
+`;
 
-      value:table
-
-    });
+    }
 
 
   }
 
 
 
+  embed.addFields({
+
+    name:"🏆 Top 10",
+
+    value:table
+
+  });
+
+
+
   embed.setFooter({
 
     text:
-    "הדירוג מתעדכן לפי נתוני השרת"
+    "הדירוג מבוסס על נתוני השרת בלבד"
 
   });
 
@@ -201,7 +201,6 @@ async function createLeaderboard(client, guildId, type = "xp") {
 
 
 
-
 function leaderboardButtons(){
 
 
@@ -209,10 +208,12 @@ return new ActionRowBuilder()
 
 .addComponents(
 
+
 new ButtonBuilder()
 .setCustomId("lb_xp")
 .setLabel("⭐ XP")
 .setStyle(ButtonStyle.Primary),
+
 
 
 new ButtonBuilder()
@@ -221,10 +222,12 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Success),
 
 
+
 new ButtonBuilder()
 .setCustomId("lb_streak")
 .setLabel("🔥 סטריק")
 .setStyle(ButtonStyle.Danger)
+
 
 );
 
@@ -233,9 +236,11 @@ new ButtonBuilder()
 
 
 
+
 module.exports = {
 
 createLeaderboard,
+
 leaderboardButtons
 
 };
