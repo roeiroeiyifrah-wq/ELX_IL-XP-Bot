@@ -118,14 +118,25 @@ async function createLeaderboard(
   const allPlayers = [...players];
 
 
-  players = players.slice(0,10);
+
+  const top10 =
+    players.slice(0,10);
+
+
+
+  const title =
+    type === "xp"
+    ? "🏆 דירוג ELX_IL - XP"
+    : type === "level"
+    ? "🏆 דירוג ELX_IL - רמות"
+    : "🏆 דירוג ELX_IL - סטריק";
 
 
 
   const embed =
   new EmbedBuilder()
 
-  .setTitle("🏆 דירוג ELX_IL")
+  .setTitle(title)
 
   .setDescription(
     "📊 עשרת השחקנים המובילים בשרת\n"
@@ -142,7 +153,7 @@ async function createLeaderboard(
   for(let i = 0; i < 10; i++){
 
 
-    const player = players[i];
+    const player = top10[i];
 
 
     const place =
@@ -155,7 +166,9 @@ async function createLeaderboard(
 
     if(player){
 
+
       table +=
+
 `${place} **${player.name}**
 ⭐ רמה: ${player.level}
 💎 XP: ${player.xp}
@@ -166,6 +179,7 @@ async function createLeaderboard(
 
 
       table +=
+
 `${place} **אין שחקן**
 ⭐ רמה: -
 💎 XP: -
@@ -173,6 +187,7 @@ async function createLeaderboard(
 `;
 
     }
+
 
   }
 
@@ -188,7 +203,6 @@ async function createLeaderboard(
 
 
 
-
   const myPlace =
     allPlayers.findIndex(
       p => p.id === viewerId
@@ -199,11 +213,11 @@ async function createLeaderboard(
   if(
     viewerId &&
     myPlace > 10 &&
-    allPlayers[myPlace-1]
+    allPlayers[myPlace - 1]
   ){
 
     const me =
-      allPlayers[myPlace-1];
+      allPlayers[myPlace - 1];
 
 
     embed.addFields({
@@ -217,7 +231,6 @@ async function createLeaderboard(
 
     });
 
-
   }
 
 
@@ -225,7 +238,11 @@ async function createLeaderboard(
   embed.setFooter({
 
     text:
-    "הדירוג מבוסס על נתוני השרת בלבד"
+    type === "xp"
+    ? "דירוג לפי XP 💎"
+    : type === "level"
+    ? "דירוג לפי רמות 📈"
+    : "דירוג לפי סטריק 🔥"
 
   });
 
