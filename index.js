@@ -1,150 +1,75 @@
+require("dotenv").config();
+
 const {
+  Client,
+  GatewayIntentBits,
   EmbedBuilder
 } = require("discord.js");
 
 const fs = require("fs");
+
 const config = require("./config");
 
 
-function loadDatabase(){
-
-  if(!fs.existsSync("database.json")){
-    return {};
-  }
-
-  return JSON.parse(
-    fs.readFileSync("database.json")
-  );
-
-}
-
-
-
-async function createLeaderboard(client, guildId){
-
-
-  const database = loadDatabase();
-
-
-  const guild =
-    await client.guilds.fetch(guildId);
-
-
-
-  let players = Object.entries(database)
-
-  .filter(([id,data]) =>
-    data.xp > 0
-  )
-
-  .map(([id,data])=>{
-
-
-    const member =
-      guild.members.cache.get(id);
-
-
-
-    return {
-
-      name:
-      member
-      ? member.user.username
-      : "משתמש לא נמצא",
-
-
-      xp:
-      data.xp || 0
-
-    };
-
-
-  });
-
-
-
-  players.sort(
-    (a,b)=>b.xp-a.xp
-  );
-
-
-
-  players =
-    players.slice(0,10);
-
-
-
-  const embed =
-  new EmbedBuilder()
-
-  .setTitle("🏆 ELX_IL XP Leaderboard")
-
-  .setDescription(
-    "⭐ דירוג לפי XP בלבד"
-  )
-
-  .setTimestamp();
-
-
-
-  let text = "";
-
-
-
-  players.forEach((player,index)=>{
-
-
-    const place =
-      index === 0 ? "🥇" :
-      index === 1 ? "🥈" :
-      index === 2 ? "🥉" :
-      `${index+1}.`;
-
-
-
-    text +=
-
-`${place} **${player.name}**
-⭐ XP: **${player.xp}**
-
-`;
-
-
-
-  });
-
-
-
-  if(!text){
-
-    text = "אין עדיין נתוני XP";
-
-  }
-
-
-
-  embed.addFields({
-
-    name:"Top 10",
-
-    value:text
-
-  });
-
-
-
-  return embed;
-
-
-}
-
-
-
-module.exports = {
-
+const {
   createLeaderboard
+} = require("./systems/leaderboard");
 
-};
+
+
+const client = new Client({
+
+  intents:[
+
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+
+  ]
+
+});
+
+
+
+let database = {};
+
+
+
+if(fs.existsSync("database.json")){
+
+
+  database = JSON.parse(
+
+    fs.readFileSync("database.json")
+
+  );
+
+
+}
+
+
+
+function saveDatabase(){
+
+
+  fs.writeFileSync(
+
+    "database.json",
+
+    JSON.stringify(database,null,2)
+
+  );
+
+
+}
+
+
+
+const cooldowns = {};
+
+
+
 const levelRoles = {
 
   10: config.ROLES.LEVEL_10,
@@ -185,11 +110,7 @@ client.once("ready",()=>{
 
 
 
-
-// =====================
-// מערכת XP
-// =====================
-
+// מערכת XP מהודעות
 
 client.on("messageCreate", async message =>{
 
@@ -200,15 +121,14 @@ client.on("messageCreate", async message =>{
 
 
 
-  const userId =
-    message.author.id;
+  const id = message.author.id;
 
 
 
-  if(!database[userId]){
+  if(!database[id]){
 
 
-    database[userId] = {
+    database[id] = {
 
       xp:0,
 
@@ -221,19 +141,13 @@ client.on("messageCreate", async message =>{
 
 
 
-
-
   const now = Date.now();
 
 
 
   if(
-
-    cooldowns[userId] &&
-
-    now - cooldowns[userId] <
-    config.XP.MESSAGE_COOLDOWN
-
+    cooldowns[id] &&
+    now - cooldowns[id] < config.XP.MESSAGE_COOLDOWN
   ){
 
     return;
@@ -242,22 +156,11 @@ client.on("messageCreate", async message =>{
 
 
 
-
-
-  cooldowns[userId] = now;
-
+  cooldowns[id] = now;
 
 
 
-
-  const oldLevel =
-    database[userId].level;
-
-
-
-
-
-  const xpGain =
+  database[id].xp +=
 
     Math.floor(
 
@@ -265,38 +168,20 @@ client.on("messageCreate", async message =>{
 
       (config.XP.MAX - config.XP.MIN + 1)
 
-    )
+    ) + config.XP.MIN;
 
-    + config.XP.MIN;
-
-
-
-
-
-  database[userId].xp += xpGain;
 
 
 
   const newLevel =
-    getLevel(
-      database[userId].xp
-    );
+    getLevel(database[id].xp);
 
 
 
-  database[userId].level =
-    newLevel;
+  if(newLevel > database[id].level){
 
 
-
-  saveDatabase();
-
-
-
-
-
-
-  if(newLevel > oldLevel){
+    database[id].level = newLevel;
 
 
     const role =
@@ -306,24 +191,29 @@ client.on("messageCreate", async message =>{
 
     if(role){
 
-
       await message.member.roles.add(role)
       .catch(()=>{});
 
-
     }
-
 
 
   }
 
 
 
-});
-// =====================
-// !leaderboard
-// =====================
+  saveDatabase();
 
+
+
+});
+
+
+
+
+
+
+
+// !leaderboard
 
 client.on("messageCreate", async message =>{
 
@@ -335,7 +225,6 @@ client.on("messageCreate", async message =>{
 
 
   if(message.content === "!leaderboard"){
-
 
 
     if(
@@ -350,193 +239,26 @@ client.on("messageCreate", async message =>{
 
 
 
-
-
     await message.delete()
     .catch(()=>{});
 
 
 
-
-
-    const msg =
-      await message.channel.send({
-
-        embeds:[
-
-          await createLeaderboard(
-
-            client,
-
-            message.guild.id
-
-          )
-
-        ]
-
-      });
-
-
-
-
-    return;
-
-
-  }
-
-
-
-
-
-
-  // =====================
-  // !xp
-  // =====================
-
-
-  if(message.content.startsWith("!xp")){
-
-
-
-    setTimeout(()=>{
-
-      message.delete()
-      .catch(()=>{});
-
-    },5000);
-
-
-
-
-
-
-    if(
-      message.author.id !==
-      "1243097719262941224"
-    ){
-
-
-
-      const noAccess =
-        await message.channel.send(
-          "❌ אין לך גישה"
-        );
-
-
-
-      setTimeout(()=>{
-
-
-        noAccess.delete()
-        .catch(()=>{});
-
-
-      },2000);
-
-
-
-      return;
-
-    }
-
-
-
-
-
-    const args =
-      message.content.split(" ");
-
-
-
-    const user =
-      message.mentions.users.first();
-
-
-
-    const amount =
-      Number(args[2]);
-
-
-
-
-
-    if(!user || !amount) return;
-
-
-
-
-
-
-    if(!database[user.id]){
-
-
-      database[user.id] = {
-
-        xp:0,
-
-        level:1
-
-      };
-
-
-    }
-
-
-
-
-
-    database[user.id].xp += amount;
-
-
-
-    database[user.id].level =
-      getLevel(
-        database[user.id].xp
-      );
-
-
-
-
-    saveDatabase();
-
-
-
-
-
-
-    const owner =
-      await client.users.fetch(
-        "1243097719262941224"
-      );
-
-
-
-
-    owner.send({
+    message.channel.send({
 
       embeds:[
 
-        new EmbedBuilder()
+        await createLeaderboard(
 
-        .setTitle("📌 XP Log")
+          client,
 
-        .setDescription(
-
-          `👤 מי נתן:\n${message.author.username}\n\n` +
-
-          `🎯 למי:\n${user.username}\n\n` +
-
-          `⭐ כמות:\n${amount} XP`
+          message.guild.id
 
         )
 
-        .setTimestamp()
-
       ]
 
-    }).catch(()=>{});
-
-
+    });
 
 
   }
@@ -544,6 +266,154 @@ client.on("messageCreate", async message =>{
 
 
 });
+
+
+
+
+
+
+
+
+// !xp
+
+client.on("messageCreate", async message =>{
+
+
+  if(message.author.bot) return;
+
+
+  if(!message.content.startsWith("!xp"))
+    return;
+
+
+
+  setTimeout(()=>{
+
+    message.delete()
+    .catch(()=>{});
+
+  },5000);
+
+
+
+
+
+  if(
+    message.author.id !==
+    "1243097719262941224"
+  ){
+
+
+    const msg =
+      await message.channel.send(
+        "❌ אין לך גישה"
+      );
+
+
+    setTimeout(()=>{
+
+      msg.delete()
+      .catch(()=>{});
+
+    },2000);
+
+
+    return;
+
+  }
+
+
+
+
+
+  const user =
+    message.mentions.users.first();
+
+
+
+  const amount =
+    Number(
+      message.content.split(" ")[2]
+    );
+
+
+
+  if(!user || !amount)
+    return;
+
+
+
+
+
+  if(!database[user.id]){
+
+
+    database[user.id] = {
+
+      xp:0,
+
+      level:1
+
+    };
+
+
+  }
+
+
+
+
+  database[user.id].xp += amount;
+
+
+  database[user.id].level =
+    getLevel(
+      database[user.id].xp
+    );
+
+
+
+  saveDatabase();
+
+
+
+
+
+
+  const owner =
+    await client.users.fetch(
+      "1243097719262941224"
+    );
+
+
+
+  owner.send({
+
+    embeds:[
+
+      new EmbedBuilder()
+
+      .setTitle("📌 XP Log")
+
+      .setDescription(
+
+        `👤 מי נתן:\n${message.author.username}\n\n`+
+
+        `🎯 למי:\n${user.username}\n\n`+
+
+        `⭐ כמות:\n${amount} XP`
+
+      )
+
+      .setTimestamp()
+
+    ]
+
+  }).catch(()=>{});
+
+
+
+});
+
 
 
 
