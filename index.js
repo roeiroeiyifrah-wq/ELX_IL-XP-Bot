@@ -18,11 +18,6 @@ const {
 } = require("./systems/leaderboard");
 
 
-const {
-  createProfile
-} = require("./systems/profile");
-
-
 
 // טעינת Slash Commands
 
